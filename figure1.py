@@ -6,26 +6,34 @@ from surfer import Brain, project_volume_data
 import matplotlib.pyplot as plt
 
 
-def make_random_weights(img, thresh=None):
-    """Convert binary mask image to a mock decoding map"""
+def make_surface_mask(img, thresh=None, hemi='lh', use_nans=True):
+    """Convert ROI mask to surface array"""
+    surface_data = project_volume_data(img, 'lh', subject_id='fsaverage')
 
-    # extract a binary mask
-    surface_data = project_volume_data(img, 'rh', subject_id='fsaverage')
-    surface_data = np.where(surface_data > thresh, 1, np.nan)
+    if use_nans:
+        mask = np.where(surface_data > thresh, 1, np.nan)
+    else:
+        mask = np.where(surface_data > thresh, 1, 0)
 
-    # set mask to random values
-    rand_values = np.random.rand(*surface_data.shape)
-    return surface_data * rand_values
+    return mask
+
+
+def make_random_weights(mask):
+    """Transform values within mask to random numbers"""
+    rand_values = np.random.rand(*mask.shape)
+    return mask * rand_values
 
 
 if __name__ == '__main__':
 
 
-    roi = make_random_weights('l_aSTS.nii.gz', 4)
+    # roi = make_random_weights('l_auditory_cortex.nii.gz', 4)
+    roi = make_surface_mask('l_auditory_cortex.nii.gz', 4)
     roi[np.isnan(roi)] = -11
 
-    b = Brain('fsaverage', 'rh', "inflated", background="white",
+    mask_brain = Brain('fsaverage', 'lh', "pial_semi_inflated", background="white",
               cortex=("binary", -4, 8, False), size=(1000, 600))
-    b.add_data(roi, thresh=-10, min=0, max=1, colormap='viridis',
-               colorbar=False)
+    mask_brain.add_data(roi, thresh=-10, min=0, max=1, colormap='Purples',
+               colorbar=False, alpha=.5)
+
 
