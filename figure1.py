@@ -20,10 +20,35 @@ def make_surface_mask(img, thresh=None, hemi='lh', use_nans=True):
     return mask
 
 
-def make_random_weights(mask):
-    """Transform values within mask to random numbers"""
-    rand_values = np.random.rand(*mask.shape)
-    return mask * rand_values
+def plot_roi_mask(filename, threshold, hemi='lh'):
+    """Create a colour mask for ROI"""
+
+    roi = make_surface_mask(filename, threshold, hemi)
+
+    brain = Brain('fsaverage', hemi, "pial", background="white",
+                  cortex='low_contrast', size=(1000, 600))
+    # replace nans so that they can be thresholded off when adding data
+    roi[np.isnan(roi)] = -11
+    brain.add_data(roi, thresh=-10, min=0, max=1, colormap='tab10',
+                   colorbar=False, alpha=.8)
+    return brain
+
+
+def plot_roi_weights(filename, threshold, hemi='lh'):
+
+    roi = make_surface_mask(filename, threshold, hemi)
+
+    # transform values within mask into random numbers
+    roi = roi * np.random.uniform(-1, 1, size=roi.shape)
+
+    brain = Brain('fsaverage', hemi, "inflated", background="white",
+                  cortex='low_contrast', size=(1000, 600))
+    # replace nans so that they can be thresholded off when adding data
+    roi[np.isnan(roi)] = -11
+    brain.add_data(roi, thresh=-10, min=-1, max=1, colormap='bwr',
+                   colorbar=False)
+    return brain
+
 
 def take_screenshot(img):
     """
@@ -34,26 +59,31 @@ def take_screenshot(img):
         arr = img.screenshot()
     except ValueError:
         arr = img.screenshot()
+
+    img.close()
     return arr
 
 
 if __name__ == '__main__':
 
-    mask_image = 'figures/auditory_cortex_mask.png'
-
-    roi = make_surface_mask('l_auditory_cortex.nii.gz', 4)
-    roi[np.isnan(roi)] = -11
-
-    mask_brain = Brain('fsaverage', 'lh', "pial_semi_inflated", background="white",
-              cortex=("binary", -4, 8, False), size=(1000, 600))
-    mask_brain.add_data(roi, thresh=-10, min=0, max=1, colormap='Purples',
-               colorbar=False, alpha=.5)
-
+    file_name = 'l_inf_temp_ant.nii.gz'
+    roi_mask = plot_roi_mask(file_name, 5, 'lh')
     mlab.view(distance=300)
-    image_array = take_screenshot(mask_brain)
-    mask_brain.close()
+    arr = take_screenshot(roi_mask)
 
-    plt.imshow(image_array, rasterized=True)
+    plt.figure(1)
+    plt.imshow(arr[50:, :], rasterized=True)
+    plt.axis('off')
+
+    plt.show()
+
+
+    roi_weights = plot_roi_weights(file_name, 5, 'lh')
+    mlab.view(158, 96, 60, [-34, 17, -54])
+    arr = take_screenshot(roi_weights)
+
+    plt.figure(2)
+    plt.imshow(arr[50:, :], rasterized=True)
     plt.axis('off')
 
     plt.show()
